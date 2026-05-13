@@ -1,16 +1,21 @@
 package com.e_commerce.shop_now.Service;
 
 import java.math.BigDecimal;
+
+
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.e_commerce.shop_now.Config.RazorePayConfig;
 import com.e_commerce.shop_now.DTO.PaymentRes;
+import com.e_commerce.shop_now.Entity.Cart;
 import com.e_commerce.shop_now.Entity.Order;
 import com.e_commerce.shop_now.Entity.OrderItem;
 import com.e_commerce.shop_now.Entity.OrderStatus;
 import com.e_commerce.shop_now.Entity.Product;
+import com.e_commerce.shop_now.Repository.CartItemsRepo;
+import com.e_commerce.shop_now.Repository.CartRepo;
 import com.e_commerce.shop_now.Repository.orderRepo;
 import com.e_commerce.shop_now.Repository.productRepo;
 import com.razorpay.RazorpayClient;
@@ -26,6 +31,10 @@ public class PaymentService {
    private orderRepo oRepo;
    @Autowired
    private productRepo repo;
+   @Autowired
+   private CartRepo cRepo;
+   @Autowired
+   private CartItemsRepo cartItemsRepo;
     private String keySecret=razorePayConfig.getKeySecret();
     public PaymentRes processPayment(Order order) {
         // Logic to process payment using Razorpay API
@@ -70,7 +79,13 @@ public class PaymentService {
                     product.setStockQuantity(stockExist);
                     repo.save(product);
                   }
+                   Cart cart = cRepo.findByUser(order.getUser())
+    .orElseThrow(() -> new RuntimeException("Cart not found"));
+                   cartItemsRepo.deleteByCart(cart);
+                   cart.setTotalprice(BigDecimal.ZERO);
+                   cRepo.save(cart);
             oRepo.save(order);
+                  
                 }
             return isValid;
         } catch (Exception e) {
